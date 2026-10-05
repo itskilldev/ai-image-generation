@@ -45,7 +45,7 @@ prompt = st.text_input("Enter your prompt", placeholder="e.g. a futuristic city 
 with st.sidebar:
     st.header("Settings")
     num_inference_steps = st.slider(
-        "Inference Steps", min_value=10, max_value=50, value=10, step=5
+        "Inference Steps", min_value=2, max_value=10, value=4, step=1
     )
     guidance_scale = st.slider(
         "Guidance Scale", min_value=1.0, max_value=15.0, value=7.5, step=0.5
