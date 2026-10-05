@@ -1,7 +1,8 @@
 streamlit
 torch
+torchvision
 diffusers
 transformers
 accelerate
 safetensors
-Pillow
+pillow
