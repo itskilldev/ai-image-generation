@@ -22,7 +22,7 @@ def load_model():
     pipe = DiffusionPipeline.from_pretrained(
         MODEL_ID,
         torch_dtype=torch.float32,
-        use_safetensors=True,
+        
     )
     device = "cuda" if torch.cuda.is_available() else "cpu"
     pipe = pipe.to(device)
