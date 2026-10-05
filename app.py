@@ -22,9 +22,15 @@ def load_model():
     pipe = DiffusionPipeline.from_pretrained(
         MODEL_ID,
         torch_dtype=torch.float32,
+        use_safetensors=True,
     )
     device = "cuda" if torch.cuda.is_available() else "cpu"
     pipe = pipe.to(device)
+
+    # CPU pe memory bachane ke liye attention slicing
+    if device == "cpu":
+        pipe.enable_attention_slicing()
+
     return pipe
 
 # -----------------------------
@@ -39,7 +45,7 @@ prompt = st.text_input("Enter your prompt", placeholder="e.g. a futuristic city 
 with st.sidebar:
     st.header("Settings")
     num_inference_steps = st.slider(
-        "Inference Steps", min_value=10, max_value=100, value=25, step=5
+        "Inference Steps", min_value=10, max_value=50, value=10, step=5
     )
     guidance_scale = st.slider(
         "Guidance Scale", min_value=1.0, max_value=15.0, value=7.5, step=0.5
@@ -70,7 +76,7 @@ if generate:
                 image.save(filepath)
 
             st.success("Image generated successfully!")
-            st.image(image, caption=prompt, use_column_width=True)
+            st.image(image, caption=prompt, use_container_width=True)
 
             with open(filepath, "rb") as f:
                 st.download_button(
