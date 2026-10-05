@@ -1,128 +1,84 @@
+import os
+from datetime import datetime
+
 import streamlit as st
 import torch
 from diffusers import DiffusionPipeline
 from PIL import Image
-import os
 
 # -----------------------------
-# Page Configuration
+# Config
 # -----------------------------
-st.set_page_config(
-    page_title="AI Image Generator",
-    page_icon="🎨",
-    layout="centered"
-)
+OUTPUT_DIR = "output"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+MODEL_ID = "segmind/tiny-sd"
 
 # -----------------------------
-# Create output folder
-# -----------------------------
-os.makedirs("generated_images", exist_ok=True)
-
-
-# -----------------------------
-# Load Model
+# Load Model (cached)
 # -----------------------------
 @st.cache_resource
 def load_model():
-
-    model_id = "segmind/tiny-sd"
-
     pipe = DiffusionPipeline.from_pretrained(
-        model_id,
-        torch_dtype=torch.float32
+        MODEL_ID,
+        torch_dtype=torch.float32,
     )
-
-    pipe = pipe.to("cpu")
-
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    pipe = pipe.to(device)
     return pipe
-
 
 # -----------------------------
 # App UI
 # -----------------------------
+st.set_page_config(page_title="AI Image Generator", page_icon="🎨")
 st.title("🎨 AI Image Generator")
-st.write("Generate an image from a text prompt using an open-source AI model.")
+st.write("Generate images from text prompts using Segmind's tiny-sd model.")
 
-st.divider()
+prompt = st.text_input("Enter your prompt", placeholder="e.g. a futuristic city at sunset")
 
-prompt = st.text_area(
-    "Enter your prompt",
-    placeholder="Example: A futuristic city at sunset, cinematic and highly detailed",
-    height=120
-)
-
-col1, col2 = st.columns(2)
-
-with col1:
-    steps = st.slider(
-        "Quality / Steps",
-        min_value=5,
-        max_value=30,
-        value=15
+with st.sidebar:
+    st.header("Settings")
+    num_inference_steps = st.slider(
+        "Inference Steps", min_value=10, max_value=100, value=25, step=5
+    )
+    guidance_scale = st.slider(
+        "Guidance Scale", min_value=1.0, max_value=15.0, value=7.5, step=0.5
     )
 
-with col2:
-    guidance = st.slider(
-        "Prompt Guidance",
-        min_value=1.0,
-        max_value=12.0,
-        value=7.5
-    )
-
-
-generate = st.button(
-    "✨ Generate Image",
-    use_container_width=True
-)
-
+generate = st.button("Generate Image")
 
 # -----------------------------
-# Generate Image
+# Generate
 # -----------------------------
 if generate:
-
     if not prompt.strip():
-        st.warning("Please enter a prompt first.")
-
+        st.warning("Please enter a prompt before generating.")
     else:
-
         try:
-
-            with st.spinner("Generating image... This may take some time on CPU."):
-
+            with st.spinner("Generating image... this may take a moment."):
                 pipe = load_model()
-
                 result = pipe(
                     prompt,
-                    num_inference_steps=steps,
-                    guidance_scale=guidance
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale,
                 )
-
                 image = result.images[0]
 
-                # Save image
-                file_path = "generated_images/generated_image.png"
-                image.save(file_path)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"generated_{timestamp}.png"
+                filepath = os.path.join(OUTPUT_DIR, filename)
+                image.save(filepath)
 
             st.success("Image generated successfully!")
+            st.image(image, caption=prompt, use_column_width=True)
 
-            st.image(
-                image,
-                caption="Generated Image",
-                use_container_width=True
-            )
-
-            # Download button
-            with open(file_path, "rb") as file:
-
+            with open(filepath, "rb") as f:
                 st.download_button(
-                    label="⬇️ Download Image",
-                    data=file,
-                    file_name="generated_image.png",
+                    label="Download Image",
+                    data=f,
+                    file_name=filename,
                     mime="image/png",
-                    use_container_width=True
                 )
 
         except Exception as e:
-
-            st.error(f"Error generating image: {e}")
+            st.error(f"Error during image generation: {e}")
